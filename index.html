@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แยกไฟล์ PDFSplit - Smooth & Fit</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+
+    <style>
+        :root { 
+            --base-height: 250px; /* ใช้ความสูงเป็นเกณฑ์แทนความกว้างเพื่อให้จัดระเบียบง่าย */
+        }
+        
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f4f9; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        h1 { color: #333; margin-bottom: 10px; }
+
+        /* Drop Zone */
+        #drop-zone {
+            width: 80%; max-width: 600px; height: 120px;
+            border: 2px dashed #007bff; border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background-color: #fff; color: #007bff; font-size: 1.1rem; cursor: pointer;
+            transition: background 0.3s; margin-bottom: 20px;
+        }
+        #drop-zone.dragover { background-color: #e6f2ff; border-color: #0056b3; }
+        .small-text { font-size: 0.85rem; color: #666; margin-top: 5px; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex; gap: 15px; align-items: center; margin-bottom: 20px;
+            background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-wrap: wrap; justify-content: center;
+        }
+        input[type="range"] { cursor: pointer; width: 150px; }
+        
+        button { border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
+        #reset-btn { background-color: #dc3545; color: white; }
+        #reset-btn:hover { background-color: #c82333; }
+        .selection-btn { background-color: #6c757d; color: white; }
+        .selection-btn:hover { background-color: #5a6268; }
+
+        /* Page List Container */
+        #page-list {
+            width: 98%; max-width: 1600px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 20px;
+            justify-content: center; 
+            align-items: flex-start; /* จัดให้ชิดบน */
+            padding: 10px; min-height: 200px;
+        }
+
+        /* Page Card Style */
+        .page-card {
+            background: white; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            padding: 10px;
+            /* สำคัญ: ให้ขนาดกล่องยืดหดตามเนื้อหาภายใน (Canvas) */
+            width: fit-content; 
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            position: relative; 
+            cursor: grab;
+            /* Smooth Transition */
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.1s;
+        }
+
+        /* เมื่อเลือก: กรอบเขียวแนบเนื้อ */
+        .page-card.selected { 
+            border: 3px solid #28a745; 
+            background-color: #f0fff4; 
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.2);
+        }
+
+        /* ขณะกำลังลาก (ตัวต้นทาง) */
+        .page-card.dragging { 
+            opacity: 0.4; 
+            border: 2px dashed #007bff; 
+            transform: scale(0.95);
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 5px;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        
+        .page-card canvas { 
+            /* กำหนดความสูงตาม Slider ส่วนความกว้างจะ Auto ตาม Ratio */
+            height: var(--base-height);
+            width: auto;
+            border: 1px solid #eee; 
+            pointer-events: none; 
+            display: block;
+        }
+
+        /* Elements on Card */
+        .page-number-label {
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background-color: #333; color: white; padding: 2px 10px; border-radius: 10px;
+            font-size: 0.8rem; z-index: 25; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .rotate-btn {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 45px; height: 45px; background-color: rgba(0, 0, 0, 0.6); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.4rem; z-index: 20; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+        }
+        .page-card:hover .rotate-btn { opacity: 1; }
+        .rotate-btn:hover { background-color: rgba(0, 123, 255, 0.9); transform: translate(-50%, -50%) scale(1.1); }
+
+        .page-info { 
+            font-size: 0.75rem; color: #555; 
+            max-width: 200px; /* จำกัดความกว้างชื่อไฟล์ไม่ให้ยาวเกิน */
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            text-align: center; margin-top: 5px; 
+        }
+        
+        .page-checkbox { position: absolute; top: 8px; left: 8px; width: 22px; height: 22px; cursor: pointer; z-index: 20; accent-color: #28a745; }
+        
+        .delete-btn {
+            position: absolute; top: -10px; right: -10px; width: 28px; height: 28px;
+            background-color: #ff4d4d; color: white; border: 2px solid white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 30; transition: transform 0.1s;
+        }
+        .delete-btn:hover { background-color: #ff0000; transform: scale(1.1); }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: none; position: sticky; bottom: 20px; z-index: 100;
+            gap: 15px; margin-top: 20px; background: rgba(255, 255, 255, 0.9);
+            padding: 15px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            backdrop-filter: blur(5px);
+        }
+        .btn-action {
+            padding: 12px 25px; font-size: 1.1rem; color: white; border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;
+        }
+        .btn-merge { background-color: #28a745; }
+        .btn-merge:hover { background-color: #218838; transform: translateY(-2px); }
+        .btn-zip { background-color: #007bff; }
+        .btn-zip:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .btn-jpg { background-color: #ffc107; color: #333; }
+        .btn-jpg:hover { background-color: #e0a800; transform: translateY(-2px); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; color: #666; }
+
+    </style>
+</head>
+<body>
+
+    <h1>แยกไฟล์ PDFSplit - Smooth & Fit</h1>
+    
+    <div class="toolbar">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <label>ขนาดแสดงผล:</label>
+            <input type="range" id="zoom-slider" min="150" max="500" value="250">
+        </div>
+        <button class="selection-btn" onclick="toggleSelectAll(true)">เลือกทั้งหมด</button>
+        <button class="selection-btn" onclick="toggleSelectAll(false)">ไม่เลือกเลย</button>
+        <button id="reset-btn" onclick="resetAll()">ล้างค่าใหม่ (Reset)</button>
+    </div>
+
+    <div id="drop-zone">
+        <span>ลากไฟล์ PDF มาวางที่นี่ (หลายไฟล์ได้)</span>
+        <span class="small-text">ระบบจะแยกทุกหน้าออกมาให้คุณเลือก</span>
+    </div>
+    
+    <input type="file" id="file-input" multiple accept="application/pdf" style="display: none;">
+
+    <div id="page-list"></div>
+
+    <div class="action-buttons" id="action-area">
+        <button class="btn-action btn-merge" onclick="processFiles('merge')">
+            📑 รวมเป็นไฟล์เดียว (.pdf)
+        </button>
+        <button class="btn-action btn-zip" onclick="processFiles('zip')">
+            📦 แยกเป็นไฟล์ย่อย (.zip)
+        </button>
+        <button class="btn-action btn-jpg" onclick="processFiles('jpg')">
+            🖼️ ดาวน์โหลดเป็นรูปภาพ (.jpg)
+        </button>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const pageListContainer = document.getElementById('page-list');
+        const actionArea = document.getElementById('action-area');
+        const zoomSlider = document.getElementById('zoom-slider');
+        
+        let pagesMap = new Map(); 
+        let sourcesMap = new Map();
+        let currentBaseHeight = 250; 
+
+        // --- 1. Zoom Logic ---
+        zoomSlider.addEventListener('input', (e) => {
+            currentBaseHeight = parseInt(e.target.value);
+            // ปรับ CSS Variable เพื่อให้การ์ดทุกใบเปลี่ยนขนาดทันที
+            document.documentElement.style.setProperty('--base-height', currentBaseHeight + 'px');
+        });
+        
+        // Re-render เพื่อความคมชัดเมื่อปล่อยเมาส์
+        zoomSlider.addEventListener('change', () => {
+            reRenderAllVisiblePages();
+        });
+
+        async function reRenderAllVisiblePages() {
+            const cards = document.querySelectorAll('.page-card');
+            for (const card of cards) {
+                const pageData = pagesMap.get(card.id);
+                if (pageData) await renderPageThumbnail(card.id, pageData);
+            }
+        }
+
+        // --- Drag & Drop Handling ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        // --- 2. Smooth Sorting Logic with Ghost Image ---
+        pageListContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); // อนุญาตให้ Drop
+            const afterElement = getDragAfterElement(pageListContainer, e.clientX, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (draggable) {
+                if (afterElement == null) {
+                    pageListContainer.appendChild(draggable);
+                } else {
+                    pageListContainer.insertBefore(draggable, afterElement);
+                }
+            }
+        });
+
+        function getDragAfterElement(container, x, y) {
+            // เลือกเฉพาะการ์ดที่ไม่ได้ถูกลาก
+            const draggableElements = [...container.querySelectorAll('.page-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                
+                // คำนวณจุดกึ่งกลางของกล่อง
+                const boxCenterX = box.left + box.width / 2;
+                const boxCenterY = box.top + box.height / 2;
+
+                // หาระยะห่าง (Distance) แบบ Euclidean เพื่อความแม่นยำ
+                const dist = Math.hypot(x - boxCenterX, y - boxCenterY);
+
+                if (dist < closest.dist) {
+                    return { dist: dist, element: child };
+                } else {
+                    return closest;
+                }
+            }, { dist: Number.POSITIVE_INFINITY }).element;
+        }
+
+        // --- 3. File Handling ---
+        async function handleFiles(files) {
+            for (const file of files) {
+                if (file.type !== 'application/pdf') { alert('ข้ามไฟล์ที่ไม่ใช่ PDF: ' + file.name); continue; }
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const sourceId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                    sourcesMap.set(sourceId, { buffer: arrayBuffer, name: file.name.replace('.pdf', '') });
+
+                    const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+                    const pdf = await loadingTask.promise;
+
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        await createPageCard(pdf, i, sourceId, file.name);
+                    }
+                } catch (err) { console.error(err); alert("ไม่สามารถอ่านไฟล์ " + file.name + " ได้"); }
+            }
+            updateUI();
+        }
+
+        async function createPageCard(pdf, pageNumber, sourceId, fileName) {
+            const cardId = 'card-' + Math.random().toString(36).substr(2, 9);
+            
+            const card = document.createElement('div');
+            card.className = 'page-card selected'; 
+            card.id = cardId; 
+            card.draggable = true;
+
+            const pageNumLabel = document.createElement('div');
+            pageNumLabel.className = 'page-number-label';
+            pageNumLabel.textContent = `หน้า ${pageNumber}`;
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox'; checkbox.className = 'page-checkbox'; checkbox.checked = true;
+            checkbox.onchange = (e) => { e.target.checked ? card.classList.add('selected') : card.classList.remove('selected'); };
+
+            const rotateBtn = document.createElement('div');
+            rotateBtn.className = 'rotate-btn';
+            rotateBtn.innerHTML = '↻';
+            rotateBtn.title = "หมุนภาพ 90 องศา";
+            rotateBtn.onclick = (e) => {
+                e.stopPropagation();
+                rotatePage(cardId);
+            };
+
+            const canvasContainer = document.createElement('div');
+            canvasContainer.className = 'canvas-container';
+            canvasContainer.id = 'container-' + cardId;
+            
+            const canvas = document.createElement('canvas');
+            canvas.id = 'canvas-' + cardId;
+            canvasContainer.appendChild(canvas);
+
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'delete-btn'; deleteBtn.innerHTML = '&times;';
+            deleteBtn.onclick = () => { pagesMap.delete(cardId); card.remove(); updateUI(); };
+
+            const info = document.createElement('div');
+            info.className = 'page-info'; info.textContent = fileName;
+
+            // --- Custom Ghost Image Logic ---
+            card.addEventListener('dragstart', (e) => {
+                card.classList.add('dragging');
+                
+                // สร้างภาพเงา (Ghost Image) ที่จางๆ
+                const ghost = card.cloneNode(true);
+                ghost.style.position = "absolute"; 
+                ghost.style.top = "-1000px"; // ซ่อนไว้นอกจอ
+                ghost.style.opacity = "0.5";
+                ghost.style.transform = "scale(0.8)"; // ย่อเล็กน้อยให้ดูสวย
+                document.body.appendChild(ghost);
+                
+                // ตั้งค่า Drag Image
+                e.dataTransfer.setDragImage(ghost, e.offsetX, e.offsetY);
+                
+                // ลบ DOM ชั่วคราวออกหลังเริ่มลาก
+                setTimeout(() => document.body.removeChild(ghost), 0);
+            });
+
+            card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+            card.append(pageNumLabel, checkbox, rotateBtn, deleteBtn, canvasContainer, info);
+            pageListContainer.appendChild(card);
+
+            // เก็บข้อมูลเริ่มต้น
+            pagesMap.set(cardId, { sourceId: sourceId, pageIndex: pageNumber - 1, rotation: 0 });
+
+            // Render ครั้งแรก
+            await renderPageThumbnail(cardId, pagesMap.get(cardId));
+        }
+
+        // --- Render Thumbnail with Auto-Fit ---
+        async function renderPageThumbnail(cardId, pageData) {
+            const sourceInfo = sourcesMap.get(pageData.sourceId);
+            if (!sourceInfo) return;
+
+            const loadingTask = pdfjsLib.getDocument(sourceInfo.buffer.slice(0));
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(pageData.pageIndex + 1);
+
+            // คำนวณ Scale
+            // ใช้ความสูงเป็นเกณฑ์ (Height-based) เพื่อให้แถวเท่ากัน
+            const viewportBasic = page.getViewport({ scale: 1.0 });
+            // คำนวณว่าจะต้อง Zoom เท่าไหร่เพื่อให้ได้ความสูงตาม Slider (currentBaseHeight)
+            // เช็คว่าหมุนไหม? ถ้าหมุน 90/270 สลับ W/H
+            const isRotated = pageData.rotation % 180 !== 0;
+            
+            // หา Scale ที่เหมาะสมกับจอ (Device Pixel Ratio) + Slider
+            const targetHeight = currentBaseHeight; 
+            const scale = (targetHeight / (isRotated ? viewportBasic.width : viewportBasic.height)) * (window.devicePixelRatio || 1);
+            
+            // Viewport ที่มีการหมุน (pdf.js จัดการสลับ W/H ให้เอง)
+            const totalRotation = (page.rotate + pageData.rotation) % 360;
+            const viewport = page.getViewport({ scale: scale, rotation: totalRotation });
+
+            const canvas = document.getElementById('canvas-' + cardId);
+            const context = canvas.getContext('2d');
+            
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            // บังคับความสูง CSS ให้เท่ากับ Slider (เพื่อให้การ์ดสูงเท่ากันในแถว)
+            canvas.style.height = currentBaseHeight + "px";
+            canvas.style.width = "auto"; // ความกว้างปล่อยฟรีตามสัดส่วน
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+        }
+
+        // --- Rotation Logic ---
+        async function rotatePage(cardId) {
+            const pageData = pagesMap.get(cardId);
+            if (!pageData) return;
+
+            // เพิ่มทีละ 90 องศา
+            pageData.rotation = (pageData.rotation + 90) % 360;
+            pagesMap.set(cardId, pageData);
+
+            // Re-render เพื่อเปลี่ยนรูปทรงการ์ด
+            await renderPageThumbnail(cardId, pageData);
+        }
+
+        // --- 4. Process Files (Download Logic) ---
+        async function processFiles(mode) {
+            const cards = document.querySelectorAll('.page-card');
+            const selectedCards = Array.from(cards).filter(card => card.querySelector('.page-checkbox').checked);
+
+            if (selectedCards.length === 0) return alert("กรุณาเลือกอย่างน้อย 1 หน้า");
+
+            setLoading(true);
+
+            try {
+                const { PDFDocument, degrees } = PDFLib;
+                const loadedDocsCache = new Map();
+
+                if (mode === 'merge' || mode === 'zip') {
+                    const outputZip = (mode === 'zip') ? new JSZip() : null;
+                    const mergedPdf = (mode === 'merge') ? await PDFDocument.create() : null;
+                    let count = 1;
+
+                    for (const card of selectedCards) {
+                        const pageData = pagesMap.get(card.id);
+                        let sourcePdfDoc = await getSourcePdf(pageData.sourceId, loadedDocsCache, PDFDocument);
+                        
+                        // Copy หน้า
+                        const [copiedPage] = await (mode === 'merge' ? mergedPdf : await PDFDocument.create()).copyPages(sourcePdfDoc, [pageData.pageIndex]);
+                        
+                        // *** Apply Rotation Only (No Scale Change) ***
+                        // เอาองศาเดิมของไฟล์ + องศาที่ user หมุนเพิ่ม
+                        const existingRotation = copiedPage.getRotation().angle;
+                        copiedPage.setRotation(degrees(existingRotation + pageData.rotation));
+
+                        if (mode === 'merge') {
+                            mergedPdf.addPage(copiedPage);
+                        } else {
+                            const singleDoc = await PDFDocument.create();
+                            // ต้อง Clone หน้าใหม่สำหรับไฟล์แยก
+                            const [singlePage] = await singleDoc.copyPages(sourcePdfDoc, [pageData.pageIndex]);
+                            const currentRot = singlePage.getRotation().angle;
+                            singlePage.setRotation(degrees(currentRot + pageData.rotation));
+                            
+                            singleDoc.addPage(singlePage);
+                            const pdfBytes = await singleDoc.save();
+                            const originalName = sourcesMap.get(pageData.sourceId).name;
+                            const fileName = `${count.toString().padStart(3, '0')}_${originalName}_Page${pageData.pageIndex + 1}.pdf`;
+                            outputZip.file(fileName, pdfBytes);
+                            count++;
+                        }
+                    }
+
+                    if (mode === 'merge') {
+                        const pdfBytes = await mergedPdf.save();
+                        download(pdfBytes, "Merged_Document.pdf", "application/pdf");
+                    } else {
+                        const zipContent = await outputZip.generateAsync({ type: "blob" });
+                        download(zipContent, "Split_PDFs.zip", "application/zip");
+                    }
+
+                } else if (mode === 'jpg') {
+                    const zip = new JSZip();
+                    let count = 1;
+
+                    for (const card of selectedCards) {
+                        const pageData = pagesMap.get(card.id);
+                        const sourceInfo = sourcesMap.get(pageData.sourceId);
+                        
+                        // โหลดใหม่เพื่อ Render JPG คุณภาพสูง (Scale 3.0)
+                        const loadingTask = pdfjsLib.getDocument(sourceInfo.buffer.slice(0));
+                        const pdf = await loadingTask.promise;
+                        const page = await pdf.getPage(pageData.pageIndex + 1);
+
+                        // หมุนตามที่ User สั่ง
+                        const totalRotation = (page.rotate + pageData.rotation) % 360;
+                        const viewport = page.getViewport({ scale: 3.0, rotation: totalRotation }); 
+
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height; 
+                        canvas.width = viewport.width;
+
+                        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+                        const originalName = sourceInfo.name;
+                        const fileName = `${count.toString().padStart(3, '0')}_${originalName}_Page${pageData.pageIndex + 1}.jpg`;
+                        
+                        if (selectedCards.length === 1) {
+                            download(blob, fileName, "image/jpeg");
+                            setLoading(false);
+                            return; 
+                        } else {
+                            zip.file(fileName, blob);
+                        }
+                        count++;
+                    }
+
+                    if (selectedCards.length > 1) {
+                        const zipContent = await zip.generateAsync({ type: "blob" });
+                        download(zipContent, "Images_Package.zip", "application/zip");
+                    }
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("เกิดข้อผิดพลาด: " + err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function getSourcePdf(sourceId, cache, PDFLibDoc) {
+            if (!cache.has(sourceId)) {
+                const buffer = sourcesMap.get(sourceId).buffer;
+                const pdfDoc = await PDFLibDoc.load(buffer);
+                cache.set(sourceId, pdfDoc);
+            }
+            return cache.get(sourceId);
+        }
+
+        function toggleSelectAll(select) {
+            document.querySelectorAll('.page-card').forEach(card => {
+                const cb = card.querySelector('.page-checkbox');
+                cb.checked = select;
+                select ? card.classList.add('selected') : card.classList.remove('selected');
+            });
+        }
+
+        function resetAll() {
+            if (pagesMap.size > 0 && !confirm("ล้างรายการทั้งหมด?")) return;
+            pagesMap.clear(); sourcesMap.clear();
+            pageListContainer.innerHTML = ''; fileInput.value = '';
+            updateUI();
+        }
+
+        function updateUI() {
+            actionArea.style.display = pagesMap.size > 0 ? 'flex' : 'none';
+        }
+
+        function setLoading(isLoading) {
+            const btns = document.querySelectorAll('.btn-action');
+            btns.forEach(btn => btn.disabled = isLoading);
+            if (isLoading) document.body.style.cursor = 'wait';
+            else document.body.style.cursor = 'default';
+        }
+
+        function download(data, filename, type) {
+            const blob = data instanceof Blob ? data : new Blob([data], { type: type });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+    </script>
+</body>
+</html>
