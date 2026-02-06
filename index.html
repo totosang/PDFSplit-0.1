@@ -1,30 +1,73 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>PDFSplit - Secure</title>
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>:root{--bh:250px}body{font-family:Sarabun,sans-serif;background:#f4f4f9;display:flex;flex-direction:column;align-items:center;padding:20px}#d-z{width:80%;max-width:600px;height:120px;border:2px dashed #007bff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#007bff;cursor:pointer;margin-bottom:20px}.toolbar{display:flex;gap:15px;align-items:center;margin-bottom:20px;background:#fff;padding:10px 20px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1)}#p-l{width:98%;max-width:1600px;display:flex;flex-wrap:wrap;gap:20px;justify-content:center;align-items:flex-start}.page-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;width:fit-content;display:flex;flex-direction:column;align-items:center;box-shadow:0 2px 5px rgba(0,0,0,.1);position:relative;cursor:grab;transition:.2s}.page-card.selected{border:3px solid #28a745;background:#f0fff4}.page-card.dragging{opacity:.4;border:2px dashed #007bff}canvas{height:var(--bh);width:auto;border:1px solid #eee;pointer-events:none;display:block}.page-number-label{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:2px 10px;border-radius:10px;font-size:.8rem;z-index:25}.rotate-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:45px;height:45px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:.2s}.page-card:hover .rotate-btn{opacity:1}.delete-btn{position:absolute;top:-10px;right:-10px;width:28px;height:28px;background:#ff4d4d;color:#fff;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:30}.action-buttons{display:none;position:sticky;bottom:20px;z-index:100;gap:15px;background:rgba(255,255,255,.9);padding:15px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,.15);backdrop-filter:blur(5px)}.btn-action{padding:12px 25px;color:#fff;border-radius:50px;border:none;cursor:pointer;font-weight:700}.btn-merge{background:#28a745}.btn-zip{background:#007bff}.btn-jpg{background:#ffc107;color:#333}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>pdf split</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+    <style>
+        :root{--base-height:180px;--primary:#7d2ae8;--bg:#f3f4f6;--card-bg:#ffffff;--success:#2ecc71}
+        body{font-family:'Sarabun',-apple-system,sans-serif;background-color:var(--bg);display:flex;flex-direction:column;align-items:center;padding:0;margin:0;min-height:100vh;color:#1f2937}
+        header{width:100%;background:#fff;padding:15px 0;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:20px}
+        h1{margin:0;font-size:1.5rem;font-weight:800;color:var(--primary);text-transform:lowercase}
+        #p-c{position:fixed;top:0;left:0;width:100%;height:5px;background:0 0;z-index:2000;display:none}
+        #p-b{width:0;height:100%;background:var(--success);transition:width .3s}
+        #dz{width:90%;max-width:800px;height:100px;border:2px dashed #d1d5db;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#6b7280;cursor:pointer;transition:.3s;margin-bottom:15px}
+        #dz:hover{border-color:var(--primary);background:#f9fafb}
+        .tb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;background:#fff;padding:12px;border-radius:50px;box-shadow:0 4px 15px rgba(0,0,0,.05);margin-bottom:20px;width:90%;max-width:800px;align-items:center}
+        button{border:none;padding:8px 16px;border-radius:30px;cursor:pointer;font-size:.85rem;font-weight:600;transition:.2s;display:flex;align-items:center;gap:5px}
+        .btn-o{background:#fff;color:#374151;border:1px solid #d1d5db}
+        .btn-d{background:#fee2e2;color:#dc2626}
+        .btn-s{background:var(--success);color:#fff;box-shadow:0 4px 6px rgba(46,204,113,.2)}
+        #pl{width:100%;display:flex;flex-wrap:wrap;gap:15px;justify-content:center;padding-bottom:120px}
+        .pc{background:var(--card-bg);border:2px solid transparent;border-radius:10px;padding:10px;position:relative;display:flex;flex-direction:column;box-shadow:0 4px 6px -1px rgba(0,0,0,.1);transition:.2s;user-select:none;touch-action:manipulation}
+        .pc.selected{border-color:var(--primary)}
+        .pc.dragging{opacity:.5}
+        canvas{height:var(--base-height);width:auto;display:block;image-rendering:-webkit-optimize-contrast;border-radius:5px}
+        .cb{position:absolute;top:10px;left:10px;width:22px;height:22px;cursor:pointer;z-index:10;accent-color:var(--primary)}
+        .bt{position:absolute;top:10px;right:10px;background:rgba(31,41,55,.8);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;z-index:5}
+        .ct{display:flex;gap:5px;margin-top:10px}
+        .bm{padding:5px;font-size:11px;flex:1;border-radius:6px;justify-content:center;background:#f3f4f6}
+        .aa{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#fff;padding:12px 20px;display:none;justify-content:center;gap:10px;box-shadow:0 10px 25px rgba(0,0,0,.15);z-index:1000;border-radius:15px;min-width:300px}
+        @media (max-width:600px){:root{--base-height:140px}.tb{border-radius:15px;padding:10px}.aa{width:90%;border-radius:12px;bottom:10px}}
+    </style>
 </head>
 <body>
-<h1>PDFSplit - Secure</h1>
-<div class="toolbar">
-    <label>Zoom:</label><input type="range" id="z-s" min="150" max="500" value="250">
-    <button onclick="_sa(1)">เลือกหมด</button><button onclick="_sa(0)">ไม่เลือก</button>
-    <button id="reset-btn" onclick="_rs()">Reset</button>
-</div>
-<div id="d-z">ลากไฟล์ PDF มาวางที่นี่</div>
-<input type="file" id="f-i" multiple accept="application/pdf" style="display:none">
-<div id="p-l"></div>
-<div class="action-buttons" id="a-a">
-    <button class="btn-action btn-merge" onclick="_pr('merge')">📑 รวมไฟล์</button>
-    <button class="btn-action btn-zip" onclick="_pr('zip')">📦 แยก ZIP</button>
-    <button class="btn-action btn-jpg" onclick="_pr('jpg')">🖼️ รูปภาพ</button>
-</div>
-<script>
-(function(){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';const _q=s=>document.getElementById(s),_dz=_q('d-z'),_fi=_q('f-i'),_pl=_q('p-l'),_aa=_q('a-a'),_zs=_q('z-s');let _pm=new Map(),_sm=new Map(),_bh=250;_zs.oninput=e=>{_bh=parseInt(e.target.value);document.documentElement.style.setProperty('--bh',_bh+'px')};_zs.onchange=()=>_rv();async function _rv(){for(const c of _0x.querySelectorAll('.page-card')){const d=_pm.get(c.id);if(d)await _rt(c.id,d)}}_dz.onclick=()=>_fi.click();_dz.ondragover=e=>{e.preventDefault();_dz.style.background='#e6f2ff'};_dz.ondrop=e=>{e.preventDefault();_dz.style.background='#fff';_hf(e.dataTransfer.files)};_fi.onchange=e=>_hf(e.target.files);_pl.ondragover=e=>{e.preventDefault();const d=_0x.querySelector('.dragging');if(d){const a=_ga(_pl,e.clientX,e.clientY);a?_pl.insertBefore(d,a):_pl.appendChild(d)}};function _ga(c,x,y){const el=[...c.querySelectorAll('.page-card:not(.dragging)')];return el.reduce((cl,ch)=>{const b=ch.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2,dt=Math.hypot(x-cx,y-cy);return dt<cl.dt?{dt:dt,el:ch}:cl},{dt:Infinity}).el}async function _hf(fs){for(const f of fs){if(f.type!=='application/pdf')continue;const b=await f.arrayBuffer(),sid=Date.now()+'-'+Math.random();_sm.set(sid,{buffer:b,name:f.name.replace('.pdf','')});const p=await pdfjsLib.getDocument(b).promise;for(let i=1;i<=p.numPages;i++)await _cc(p,i,sid,f.name)}_up()}async function _cc(p,n,s,fn){const id='c-'+Math.random().toString(36).substr(2,9),cd=document.createElement('div');cd.className='page-card selected';cd.id=id;cd.draggable=!0;cd.innerHTML=`<div class="page-number-label">หน้า ${n}</div><input type="checkbox" class="page-checkbox" checked onclick="this.parentNode.classList.toggle('selected',this.checked)"><div class="rotate-btn" onclick="_ro('${id}')">↻</div><div class="delete-btn" onclick="_rm('${id}')">&times;</div><canvas id="can-${id}"></canvas><div class="page-info" style="font-size:10px">${fn}</div>`;cd.ondragstart=e=>{cd.classList.add('dragging');const g=cd.cloneNode(!0);g.style.opacity='0.5';_0x.body.appendChild(g);e.dataTransfer.setDragImage(g,e.offsetX,e.offsetY);setTimeout(()=>_0x.body.removeChild(g),0)};cd.ondragend=()=>cd.classList.remove('dragging');_pl.appendChild(cd);_pm.set(id,{sourceId:s,pageIndex:n-1,rotation:0});await _rt(id,_pm.get(id))}async function _rt(id,d){const s=_sm.get(d.sourceId),p=await(await pdfjsLib.getDocument(s.buffer.slice(0)).promise).getPage(d.pageIndex+1),vb=p.getViewport({scale:1}),is=d.rotation%180!==0,sc=(_bh/(is?vb.width:vb.height))*(window.devicePixelRatio||1),tr=(p.rotate+d.rotation)%360,vp=p.getViewport({scale:sc,rotation:tr}),cn=_q('can-'+id),ctx=cn.getContext('2d');cn.width=vp.width;cn.height=vp.height;cn.style.height=_bh+'px';await p.render({canvasContext:ctx,viewport:vp}).promise}window._ro=async(id)=>{const d=_pm.get(id);d.rotation=(d.rotation+90)%360;await _rt(id,d)};window._rm=id=>{_pm.delete(id);_q(id).remove();_up()};window._sa=s=>{_0x.querySelectorAll('.page-card').forEach(c=>{c.querySelector('input').checked=s;c.classList.toggle('selected',s)})};window._rs=()=>{if(_pm.size&&confirm("Reset?")){_pm.clear();_sm.clear();_pl.innerHTML='';_up()}};function _up(){_aa.style.display=_pm.size>0?'flex':'none'}window._pr=async(m)=>{const sd=[..._0x.querySelectorAll('.page-card')].filter(c=>c.querySelector('input').checked);if(!sd.length)return alert("เลือกหน้าก่อน");const{PDFDocument:PD,degrees:dg}=PDFLib,_ca=new Map(),z=new JSZip(),mp=m==='merge'?await PD.create():null;for(const c of sd){const d=_pm.get(c.id);let sP=await(async()=>{if(!_ca.has(d.sourceId)){const b=_sm.get(d.sourceId).buffer,dc=await PD.load(b);_ca.set(d.sourceId,dc)}return _ca.get(d.sourceId)})();const[cp]=await(m==='merge'?mp:await PD.create()).copyPages(sP,[d.pageIndex]);cp.setRotation(dg(cp.getRotation().angle+d.rotation));if(m==='merge')mp.addPage(cp);else if(m==='zip'){const sd=await PD.create(),[p]=await sd.copyPages(sP,[d.pageIndex]);p.setRotation(dg(p.getRotation().angle+d.rotation));sd.addPage(p);z.file(`P${sd.getPageCount()}_${_sm.get(d.sourceId).name}.pdf`,await sd.save())}else{const p=await(await pdfjsLib.getDocument(_sm.get(d.sourceId).buffer.slice(0)).promise).getPage(d.pageIndex+1),vp=p.getViewport({scale:3,rotation:(p.rotate+d.rotation)%360}),cn=document.createElement('canvas');cn.width=vp.width;cn.height=vp.height;await p.render({canvasContext:cn.getContext('2d'),viewport:vp}).promise;const bl=await new Promise(r=>cn.toBlob(r,'image/jpeg',.95));if(sd.length===1)return _dl(bl,`P1.jpg`);z.file(`P${ex++}.jpg`,bl)}}m==='merge'?_dl(await mp.save(),"Merged.pdf"):_dl(await z.generateAsync({type:"blob"}),"Export.zip")};function _dl(d,n){const b=d instanceof Blob?d:new Blob([d]),l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=n;l.click()};const _0x=document;})()
-</script>
+    <div id="p-c"><div id="p-b"></div></div>
+    <header><h1>pdf split</h1></header>
+    <div id="dz"><b>ลากไฟล์มาวาง หรือ Ctrl+V</b><span style="font-size:.75rem;margin-top:5px">PDF, JPG หรือ PNG (คุณภาพสูง 500%)</span></div>
+    <div class="tb">
+        <button class="btn-o" onclick="tA(1)">✓ ทั้งหมด</button>
+        <button class="btn-o" onclick="tA(0)">✕ ยกเลิก</button>
+        <button class="btn-d" onclick="rA()">🗑️ ล้าง</button>
+        <div style="display:flex;align-items:center;gap:5px;margin-left:10px;border-left:1px solid #ddd;padding-left:10px">
+            <input type="range" id="zs" min="100" max="500" value="180" style="width:80px">
+        </div>
+    </div>
+    <input type="file" id="fi" multiple accept="application/pdf,image/*" style="display:none">
+    <div id="pl"></div>
+    <div class="aa" id="aa">
+        <button class="btn-s" onclick="pF('pdf')">📥 pdf</button>
+        <button class="btn-s" onclick="pF('jpg')">📥 jpg</button>
+        <button class="btn-s" onclick="pF('png')">📥 png</button>
+    </div>
+    <script>
+        const d=document,dz=d.getElementById('dz'),fi=d.getElementById('fi'),pl=d.getElementById('pl'),aa=d.getElementById('aa'),zs=d.getElementById('zs'),pb=d.getElementById('p-b'),pc=d.getElementById('p-c');let m=new Map();
+        zs.oninput=e=>{d.documentElement.style.setProperty('--base-height',e.target.value+'px')};
+        dz.onclick=()=>fi.click();fi.onchange=e=>hF(e.target.files);
+        window.onpaste=async e=>{let i=(e.clipboardData||e.originalEvent.clipboardData).items,f=[];for(let t of i)if(t.kind==='file')f.push(t.getAsFile());if(f.length)hF(f)};
+        dz.ondragover=e=>{e.preventDefault();dz.style.borderColor="var(--primary)"};
+        dz.ondragleave=()=>dz.style.borderColor="#d1d5db";dz.ondrop=e=>{e.preventDefault();hF(e.dataTransfer.files)};
+        async function hF(fs){for(let f of fs){let i='s-'+Math.random().toString(36).substr(2,5);if(f.type==='application/pdf'){let p=await pdfjsLib.getDocument(await f.arrayBuffer()).promise;for(let j=1;j<=p.numPages;j++)await cC(i,f,'PDF',j)}else if(f.type.startsWith('image/'))await cC(i,f,'IMG')}uI()}
+        async function cC(s,f,t,n=1){let i='c-'+Math.random().toString(36).substr(2,5),c=d.createElement('div');c.className='pc selected';c.id=i;c.draggable=!0;m.set(i,{file:f,type:t,pageIndex:n-1,rotation:0});c.innerHTML=`<input type="checkbox" class="cb" checked onclick="event.stopPropagation();uI()"><span class="bt">${t==='PDF'?'P.'+n:'IMG'}</span><canvas id="v-${i}"></canvas><div class="ct"><button class="bm" onclick="rC('${i}')">↻ หมุน</button><button class="bm" style="color:#dc2626" onclick="rmC('${i}')">ลบ</button></div>`;c.onclick=e=>{if(!e.target.closest('button')&&!e.target.closest('input')){let x=c.querySelector('.cb');x.checked=!x.checked;uI()}};c.ondragstart=e=>{c.classList.add('dragging');e.dataTransfer.setData('text',i)};c.ondragend=()=>c.classList.remove('dragging');pl.appendChild(c);rT(i)}
+        async function rT(i){let x=m.get(i),v=d.getElementById('v-'+i),g=v.getContext('2d'),r=window.devicePixelRatio||1;if(x.type==='PDF'){let p=await pdfjsLib.getDocument(await x.file.arrayBuffer()).promise,q=await p.getPage(x.pageIndex+1),w=q.getViewport({scale:r,rotation:x.rotation});v.width=w.width;v.height=w.height;await q.render({canvasContext:g,viewport:w}).promise}else{let l=await lI(URL.createObjectURL(x.file)),o=x.rotation%180!==0;v.width=(o?l.height:l.width)*r;v.height=(o?l.width:l.height)*r;g.scale(r,r);g.translate(v.width/(2*r),v.height/(2*r));g.rotate(x.rotation*Math.PI/180);g.drawImage(l,-l.width/2,-l.height/2)}}
+        async function pF(o){let s=Array.from(d.querySelectorAll('.pc')).filter(c=>c.querySelector('.cb').checked);if(!s.length)return alert("เลือกไฟล์ก่อน");sL(!0,!0);let t=s.length;try{if(o==='pdf'){const{PDFDocument:X,degrees:Y}=PDFLib;let g=await X.create();for(let i=0;i<t;i++){let x=m.get(s[i].id);if(x.type==='PDF'){let[z]=await g.copyPages(await X.load(await x.file.arrayBuffer()),[x.pageIndex]);z.setRotation(Y(z.getRotation().angle+x.rotation));g.addPage(z)}else{let b=await x.file.arrayBuffer(),j=x.file.type==='image/png'?await g.embedPng(b):await g.embedJpg(b),k=g.addPage([j.width,j.height]);k.drawImage(j,{x:0,y:0,width:j.width,height:j.height});k.setRotation(Y(x.rotation))}uP(((i+1)/t)*100)}dL(await g.save(),"export.pdf","application/pdf")}else{if(t===1){let b=await cHQ(m.get(s[0].id),o);dL(b,`file.${o}`,`image/${o}`)}else{let z=new JSZip();for(let i=0;i<t;i++){let b=await cHQ(m.get(s[i].id),o);z.file(`file_${i+1}.${o}`,b);uP(((i+1)/t)*100)}dL(await z.generateAsync({type:"blob"}),"package.zip","application/zip")}}}catch(e){alert(e.message)}sL(!1,!1)}
+        async function cHQ(x,o){let v=d.createElement('canvas'),g=v.getContext('2d');if(x.type==='PDF'){let p=await (await pdfjsLib.getDocument(await x.file.arrayBuffer()).promise).getPage(x.pageIndex+1),w=p.getViewport({scale:3,rotation:x.rotation});v.width=w.width;v.height=w.height;await p.render({canvasContext:g,viewport:w}).promise}else{let l=await lI(URL.createObjectURL(x.file)),u=x.rotation%180!==0;v.width=u?l.height:l.width;v.height=u?l.width:l.height;g.translate(v.width/2,v.height/2);g.rotate(x.rotation*Math.PI/180);g.drawImage(l,-l.width/2,-l.height/2)}return new Promise(r=>v.toBlob(r,`image/${o}`,.98))}
+        function rC(i){let x=m.get(i);x.rotation=(x.rotation+90)%360;rT(i)}function rmC(i){m.delete(i);d.getElementById(i).remove();uI()}function tA(s){d.querySelectorAll('.cb').forEach(c=>c.checked=!!s);uI()}function rA(){if(confirm("ล้างทั้งหมด?"))location.reload()}function uI(){let s=Array.from(d.querySelectorAll('.cb')).some(c=>c.checked);aa.style.display=s?'flex':'none';d.querySelectorAll('.pc').forEach(c=>{c.classList.toggle('selected',c.querySelector('.cb').checked)})}function sL(s,p){d.body.style.cursor=s?'wait':'default';pc.style.display=p?'block':'none';if(!s)pb.style.width='0%'}function uP(v){pb.style.width=v+'%'}function dL(b,n,t){let a=d.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:t}));a.download=n;a.click()}function lI(u){return new Promise(r=>{let i=new Image();i.onload=()=>r(i);i.src=u})}
+        pl.ondragover=e=>{e.preventDefault();let x=d.querySelector('.dragging');if(!x)return;let a=[...pl.querySelectorAll('.pc:not(.dragging)')].reduce((k,c)=>{let b=c.getBoundingClientRect(),o=e.clientX-b.left-b.width/2;if(o<0&&o>k.offset)return{offset:o,element:c};return k},{offset:-Infinity}).element;a?pl.insertBefore(x,a):pl.appendChild(x)}
+    </script>
 </body>
 </html>
