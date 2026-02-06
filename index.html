@@ -1,273 +1,47 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>pdf split</title>
-    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
-
-    <style>
-        :root { --base-height: 180px; --primary: #7d2ae8; --bg: #f3f4f6; --card-bg: #ffffff; --success: #2ecc71; }
-        body { font-family: 'Sarabun', -apple-system, sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; min-height: 100vh; color: #1f2937; }
-        header { width: 100%; background: white; padding: 15px 0; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--primary); text-transform: lowercase; }
-
-        #progress-container { position: fixed; top: 0; left: 0; width: 100%; height: 5px; background: transparent; z-index: 2000; display: none; }
-        #progress-bar { width: 0%; height: 100%; background: var(--success); transition: width 0.3s; }
-
-        #drop-zone { width: 90%; max-width: 800px; height: 100px; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #fff; color: #6b7280; cursor: pointer; transition: 0.3s; margin-bottom: 15px; }
-        #drop-zone:hover { border-color: var(--primary); background-color: #f9fafb; }
-
-        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; background: white; padding: 12px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; width: 90%; max-width: 800px; align-items: center; }
-        button { border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
-        .btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
-        .btn-danger { background: #fee2e2; color: #dc2626; }
-        .btn-download { background: var(--success); color: white; box-shadow: 0 4px 6px rgba(46, 204, 113, 0.2); }
-        .btn-download:hover { background: #27ae60; }
-
-        #page-list { width: 100%; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; padding-bottom: 120px; }
-        .page-card { background: var(--card-bg); border: 2px solid transparent; border-radius: 10px; padding: 10px; position: relative; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: 0.2s; user-select: none; touch-action: manipulation; }
-        .page-card.selected { border-color: var(--primary); }
-        .page-card.dragging { opacity: 0.5; }
-
-        .canvas-container { border-radius: 5px; overflow: hidden; background: #f9fafb; }
-        canvas { height: var(--base-height); width: auto; display: block; image-rendering: -webkit-optimize-contrast; }
-
-        .card-checkbox { position: absolute; top: 10px; left: 10px; width: 22px; height: 22px; cursor: pointer; z-index: 10; accent-color: var(--primary); }
-        .badge-type { position: absolute; top: 10px; right: 10px; background: rgba(31, 41, 55, 0.8); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; z-index: 5; }
-
-        .card-tools { display: flex; gap: 5px; margin-top: 10px; }
-        .btn-mini { padding: 5px; font-size: 11px; flex: 1; border-radius: 6px; justify-content: center; background: #f3f4f6; }
-
-        .action-area { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 12px 20px; display: none; justify-content: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 1000; border-radius: 15px; width: auto; min-width: 300px; }
-
-        @media (max-width: 600px) { :root { --base-height: 140px; } .toolbar { border-radius: 15px; padding: 10px; } .action-area { width: 90%; border-radius: 12px; bottom: 10px; } }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>pdf split</title>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+<style>
+:root{--base-height:180px;--primary:#7d2ae8;--bg:#f3f4f6;--card-bg:#fff;--success:#2ecc71}body{font-family:Sarabun,-apple-system,sans-serif;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:0;margin:0;min-height:100vh;color:#1f2937}header{width:100%;background:#fff;padding:15px 0;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:20px}h1{margin:0;font-size:1.5rem;font-weight:800;color:var(--primary);text-transform:lowercase}#progress-container{position:fixed;top:0;left:0;width:100%;height:5px;background:0 0;z-index:2000;display:none}#progress-bar{width:0;height:100%;background:var(--success);transition:width .3s}#drop-zone{width:90%;max-width:800px;height:100px;border:2px dashed #d1d5db;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#6b7280;cursor:pointer;transition:.3s;margin-bottom:15px}#drop-zone:hover{border-color:var(--primary);background:#f9fafb}.toolbar{display:flex;gap:8px;flex-wrap:wrap;justify:center;background:#fff;padding:12px;border-radius:50px;box-shadow:0 4px 15px rgba(0,0,0,.05);margin-bottom:20px;width:90%;max-width:800px;align-items:center}button{border:none;padding:8px 16px;border-radius:30px;cursor:pointer;font-size:.85rem;font-weight:600;transition:.2s;display:flex;align-items:center;gap:5px}.btn-outline{background:#fff;color:#374151;border:1px solid #d1d5db}.btn-danger{background:#fee2e2;color:#dc2626}.btn-download{background:var(--success);color:#fff;box-shadow:0 4px 6px rgba(46,204,113,.2)}.btn-download:hover{background:#27ae60}#page-list{width:100%;display:flex;flex-wrap:wrap;gap:15px;justify-content:center;padding-bottom:120px}.page-card{background:var(--card-bg);border:2px solid transparent;border-radius:10px;padding:10px;position:relative;display:flex;flex-direction:column;box-shadow:0 4px 6px -1px rgba(0,0,0,.1);transition:.2s;user-select:none;touch-action:manipulation}.page-card.selected{border-color:var(--primary)}.page-card.dragging{opacity:.5}.canvas-container{border-radius:5px;overflow:hidden;background:#f9fafb}canvas{height:var(--base-height);width:auto;display:block;image-rendering:-webkit-optimize-contrast}.card-checkbox{position:absolute;top:10px;left:10px;width:22px;height:22px;cursor:pointer;z-index:10;accent-color:var(--primary)}.badge-type{position:absolute;top:10px;right:10px;background:rgba(31,41,55,.8);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;z-index:5}.card-tools{display:flex;gap:5px;margin-top:10px}.btn-mini{padding:5px;font-size:11px;flex:1;border-radius:6px;justify-content:center;background:#f3f4f6}.action-area{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#fff;padding:12px 20px;display:none;justify-content:center;gap:10px;box-shadow:0 10px 25px rgba(0,0,0,.15);z-index:1000;border-radius:15px;width:auto;min-width:300px}@media (max-width:600px){:root{--base-height:140px}.toolbar{border-radius:15px;padding:10px}.action-area{width:90%;border-radius:12px;bottom:10px}}
+</style>
 </head>
 <body>
-
-    <div id="progress-container"><div id="progress-bar"></div></div>
-    <header><h1>pdf split</h1></header>
-
-    <div id="drop-zone">
-        <span style="font-weight: bold;">ลากไฟล์มาวาง หรือ Ctrl+V</span>
-        <span style="font-size: 0.75rem; margin-top:5px;">PDF, JPG หรือ PNG (คุณภาพสูง 500%)</span>
-    </div>
-
-    <div class="toolbar">
-        <button class="btn-outline" onclick="toggleSelectAll(true)">✓ ทั้งหมด</button>
-        <button class="btn-outline" onclick="toggleSelectAll(false)">✕ ยกเลิก</button>
-        <button class="btn-danger" onclick="resetAll()">🗑️ ล้าง</button>
-        <div style="display:flex; align-items:center; gap:5px; margin-left:10px; border-left:1px solid #ddd; padding-left:10px;">
-            <input type="range" id="zoom-slider" min="100" max="500" value="180" style="width: 80px;">
-        </div>
-    </div>
-
-    <input type="file" id="file-input" multiple accept="application/pdf,image/*" style="display: none;">
-    <div id="page-list"></div>
-
-    <div class="action-area" id="action-area">
-        <button class="btn-download" onclick="processFiles('pdf')">📥 pdf</button>
-        <button class="btn-download" onclick="processFiles('jpg')">📥 jpg</button>
-        <button class="btn-download" onclick="processFiles('png')">📥 png</button>
-    </div>
-
-    <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const pageListContainer = document.getElementById('page-list');
-        const actionArea = document.getElementById('action-area');
-        const zoomSlider = document.getElementById('zoom-slider');
-        const progressBar = document.getElementById('progress-bar');
-        const progressContainer = document.getElementById('progress-container');
-        let pagesMap = new Map();
-
-        zoomSlider.oninput = (e) => { document.documentElement.style.setProperty('--base-height', e.target.value + 'px'); };
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = (e) => handleFiles(e.target.files);
-
-        window.addEventListener('paste', async (e) => {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            const files = [];
-            for (let item of items) { if (item.kind === 'file') files.push(item.getAsFile()); }
-            if (files.length > 0) handleFiles(files);
-        });
-
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--primary)"; };
-        dropZone.ondragleave = () => { dropZone.style.borderColor = "#d1d5db"; };
-        dropZone.ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
-
-        async function handleFiles(files) {
-            for (const file of files) {
-                const id = 'src-' + Math.random().toString(36).substr(2, 5);
-                if (file.type === 'application/pdf') {
-                    const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
-                    for (let i = 1; i <= pdf.numPages; i++) await createCard(id, file, 'PDF', i);
-                } else if (file.type.startsWith('image/')) {
-                    await createCard(id, file, 'IMG');
-                }
-            }
-            updateUI();
-        }
-
-        async function createCard(sourceId, file, type, pageNum = 1) {
-            const cardId = 'c-' + Math.random().toString(36).substr(2, 5);
-            const card = document.createElement('div');
-            card.className = 'page-card selected';
-            card.id = cardId;
-            card.draggable = true;
-            pagesMap.set(cardId, { file, type, pageIndex: pageNum - 1, rotation: 0 });
-
-            card.innerHTML = `
-                <input type="checkbox" class="card-checkbox" checked onclick="event.stopPropagation(); updateUI();">
-                <span class="badge-type">${type === 'PDF' ? 'P.' + pageNum : 'IMG'}</span>
-                <div class="canvas-container"><canvas id="canvas-${cardId}"></canvas></div>
-                <div class="card-tools">
-                    <button class="btn-mini" onclick="rotateCard('${cardId}')">↻ หมุน</button>
-                    <button class="btn-mini" style="color:#dc2626" onclick="removeCard('${cardId}')">ลบ</button>
-                </div>
-            `;
-
-            card.onclick = (e) => { 
-                if(!e.target.closest('button') && !e.target.closest('input')) {
-                    const cb = card.querySelector('.card-checkbox');
-                    cb.checked = !cb.checked;
-                    updateUI();
-                } 
-            };
-            card.ondragstart = (e) => { card.classList.add('dragging'); e.dataTransfer.setData('text', cardId); };
-            card.ondragend = () => card.classList.remove('dragging');
-
-            pageListContainer.appendChild(card);
-            renderThumbnail(cardId);
-        }
-
-        async function renderThumbnail(cardId) {
-            const data = pagesMap.get(cardId);
-            const canvas = document.getElementById('canvas-' + cardId);
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-
-            if (data.type === 'PDF') {
-                const pdf = await pdfjsLib.getDocument(await data.file.arrayBuffer()).promise;
-                const page = await pdf.getPage(data.pageIndex + 1);
-                const vp = page.getViewport({ scale: dpr, rotation: data.rotation });
-                canvas.width = vp.width; canvas.height = vp.height;
-                await page.render({ canvasContext: ctx, viewport: vp }).promise;
-            } else {
-                const img = await loadImage(URL.createObjectURL(data.file));
-                const isRot = data.rotation % 180 !== 0;
-                canvas.width = (isRot ? img.height : img.width) * dpr;
-                canvas.height = (isRot ? img.width : img.height) * dpr;
-                ctx.scale(dpr, dpr);
-                ctx.translate(canvas.width/(2*dpr), canvas.height/(2*dpr)); 
-                ctx.rotate(data.rotation * Math.PI / 180);
-                ctx.drawImage(img, -img.width/2, -img.height/2);
-            }
-        }
-
-        async function processFiles(out) {
-            const selected = Array.from(document.querySelectorAll('.page-card')).filter(c => c.querySelector('.card-checkbox').checked);
-            if (!selected.length) return alert("เลือกไฟล์ก่อนครับ");
-            
-            setLoading(true, true);
-            const total = selected.length;
-
-            try {
-                if (out === 'pdf') {
-                    const { PDFDocument, degrees } = PDFLib;
-                    const merged = await PDFDocument.create();
-                    for (let i = 0; i < total; i++) {
-                        const d = pagesMap.get(selected[i].id);
-                        if (d.type === 'PDF') {
-                            const [p] = await merged.copyPages(await PDFDocument.load(await d.file.arrayBuffer()), [d.pageIndex]);
-                            p.setRotation(degrees(p.getRotation().angle + d.rotation));
-                            merged.addPage(p);
-                        } else {
-                            // แปลง IMG กลับเป็น PDF
-                            const imgBytes = await d.file.arrayBuffer();
-                            const img = d.file.type === 'image/png' ? await merged.embedPng(imgBytes) : await merged.embedJpg(imgBytes);
-                            const p = merged.addPage([img.width, img.height]);
-                            p.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
-                            p.setRotation(degrees(d.rotation));
-                        }
-                        updateProgress(((i + 1) / total) * 100);
-                    }
-                    download(await merged.save(), "pdf_split_export.pdf", "application/pdf");
-                } else {
-                    if (selected.length === 1) {
-                        const d = pagesMap.get(selected[0].id);
-                        const blob = await captureHighQualityImage(d, out);
-                        download(blob, `export.${out}`, `image/${out}`);
-                    } else {
-                        const zip = new JSZip();
-                        for (let i = 0; i < total; i++) {
-                            const d = pagesMap.get(selected[i].id);
-                            const blob = await captureHighQualityImage(d, out);
-                            zip.file(`file_${i+1}.${out}`, blob);
-                            updateProgress(((i + 1) / total) * 100);
-                        }
-                        download(await zip.generateAsync({type:"blob"}), "images_package.zip", "application/zip");
-                    }
-                }
-            } catch (err) { alert(err.message); }
-            setLoading(false, false);
-        }
-
-        async function captureHighQualityImage(d, out) {
-            const fCanvas = document.createElement('canvas');
-            const fCtx = fCanvas.getContext('2d');
-            if (d.type === 'PDF') {
-                const page = await (await pdfjsLib.getDocument(await d.file.arrayBuffer()).promise).getPage(d.pageIndex + 1);
-                const vp = page.getViewport({ scale: 3.0, rotation: d.rotation });
-                fCanvas.width = vp.width; fCanvas.height = vp.height;
-                await page.render({ canvasContext: fCtx, viewport: vp }).promise;
-            } else {
-                const img = await loadImage(URL.createObjectURL(d.file));
-                const isRot = d.rotation % 180 !== 0;
-                fCanvas.width = isRot ? img.height : img.width; fCanvas.height = isRot ? img.width : img.height;
-                fCtx.translate(fCanvas.width/2, fCanvas.height/2); fCtx.rotate(d.rotation * Math.PI / 180);
-                fCtx.drawImage(img, -img.width/2, -img.height/2);
-            }
-            return new Promise(r => fCanvas.toBlob(r, `image/${out}`, 0.98));
-        }
-
-        function rotateCard(id) { const d = pagesMap.get(id); d.rotation = (d.rotation + 90) % 360; renderThumbnail(id); }
-        function removeCard(id) { pagesMap.delete(id); document.getElementById(id).remove(); updateUI(); }
-        function toggleSelectAll(s) { document.querySelectorAll('.card-checkbox').forEach(cb => cb.checked = s); updateUI(); }
-        function resetAll() { if(confirm("ล้างทั้งหมด?")) location.reload(); }
-        
-        function updateUI() { 
-            const hasSelected = Array.from(document.querySelectorAll('.card-checkbox')).some(cb => cb.checked);
-            actionArea.style.display = hasSelected ? 'flex' : 'none'; 
-            document.querySelectorAll('.page-card').forEach(c => {
-                c.classList.toggle('selected', c.querySelector('.card-checkbox').checked);
-            });
-        }
-
-        function setLoading(s, showProgress) { 
-            document.body.style.cursor = s ? 'wait' : 'default'; 
-            progressContainer.style.display = showProgress ? 'block' : 'none';
-            if(!s) progressBar.style.width = '0%';
-        }
-        function updateProgress(val) { progressBar.style.width = val + '%'; }
-        function download(b, n, t) { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([b], {type: t})); l.download = n; l.click(); }
-        function loadImage(u) { return new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = u; }); }
-
-        pageListContainer.ondragover = (e) => {
-            e.preventDefault();
-            const d = document.querySelector('.dragging'); if (!d) return;
-            const after = [...pageListContainer.querySelectorAll('.page-card:not(.dragging)')].reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = e.clientX - box.left - box.width / 2;
-                if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-                return closest;
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-            after ? pageListContainer.insertBefore(d, after) : pageListContainer.appendChild(d);
-        };
-    </script>
+<div id="progress-container"><div id="progress-bar"></div></div>
+<header><h1>pdf split</h1></header>
+<div id="drop-zone"><span style="font-weight:700">ลากไฟล์มาวาง หรือ Ctrl+V</span><span style="font-size:.75rem;margin-top:5px">PDF, JPG หรือ PNG (คุณภาพสูง 500%)</span></div>
+<div class="toolbar">
+<button class="btn-outline" onclick="toggleSelectAll(!0)">✓ ทั้งหมด</button>
+<button class="btn-outline" onclick="toggleSelectAll(!1)">✕ ยกเลิก</button>
+<button class="btn-danger" onclick="resetAll()">🗑️ ล้าง</button>
+<div style="display:flex;align-items:center;gap:5px;margin-left:10px;border-left:1px solid #ddd;padding-left:10px">
+<input type="range" id="zoom-slider" min="100" max="500" value="180" style="width:80px">
+</div>
+</div>
+<input type="file" id="file-input" multiple accept="application/pdf,image/*" style="display:none">
+<div id="page-list"></div>
+<div class="action-area" id="action-area">
+<button class="btn-download" onclick="processFiles('pdf')">📥 pdf</button>
+<button class="btn-download" onclick="processFiles('jpg')">📥 jpg</button>
+<button class="btn-download" onclick="processFiles('png')">📥 png</button>
+</div>
+<script>
+const dz=document.getElementById('drop-zone'),fi=document.getElementById('file-input'),pl=document.getElementById('page-list'),aa=document.getElementById('action-area'),zs=document.getElementById('zoom-slider'),pb=document.getElementById('progress-bar'),pc=document.getElementById('progress-container');let pm=new Map();
+zs.oninput=e=>{document.documentElement.style.setProperty('--base-height',e.target.value+'px')};dz.onclick=()=>fi.click();fi.onchange=e=>hf(e.target.files);
+window.addEventListener('paste',async e=>{const it=(e.clipboardData||e.originalEvent.clipboardData).items;const fs=[];for(let i of it){if(i.kind==='file')fs.push(i.getAsFile())}if(fs.length>0)hf(fs)});
+dz.ondragover=e=>{e.preventDefault();dz.style.borderColor='var(--primary)'};dz.ondragleave=()=>{dz.style.borderColor='#d1d5db'};dz.ondrop=e=>{e.preventDefault();hf(e.dataTransfer.files)};
+async function hf(fs){for(let f of fs){const id='s-'+Math.random().toString(36).substr(2,5);if(f.type==='application/pdf'){const pdf=await pdfjsLib.getDocument(await f.arrayBuffer()).promise;for(let i=1;i<=pdf.numPages;i++)await cc(id,f,'PDF',i)}else if(f.type.startsWith('image/')){await cc(id,f,'IMG')}}uUI()}
+async function cc(sid,f,t,pn=1){const id='c-'+Math.random().toString(36).substr(2,5);const c=document.createElement('div');c.className='page-card selected';c.id=id;c.draggable=!0;pm.set(id,{file:f,type:t,pageIndex:pn-1,rotation:0});c.innerHTML=`<input type="checkbox" class="card-checkbox" checked onclick="event.stopPropagation();uUI()"><span class="badge-type">${t==='PDF'?'P.'+pn:'IMG'}</span><div class="canvas-container"><canvas id="canvas-${id}"></canvas></div><div class="card-tools"><button class="btn-mini" onclick="rc('${id}')">↻ หมุน</button><button class="btn-mini" style="color:#dc2626" onclick="rmc('${id}')">ลบ</button></div>`;c.onclick=e=>{if(!e.target.closest('button')&&!e.target.closest('input')){const cb=c.querySelector('.card-checkbox');cb.checked=!cb.checked;uUI()}};c.ondragstart=e=>{c.classList.add('dragging');e.dataTransfer.setData('text',id)};c.ondragend=()=>c.classList.remove('dragging');pl.appendChild(c);rt(id)}
+async function rt(id){const d=pm.get(id),cv=document.getElementById('canvas-'+id),ctx=cv.getContext('2d'),dpr=window.devicePixelRatio||1;if(d.type==='PDF'){const pdf=await pdfjsLib.getDocument(await d.file.arrayBuffer()).promise,pg=await pdf.getPage(d.pageIndex+1),vp=pg.getViewport({scale:dpr,rotation:d.rotation});cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:ctx,viewport:vp}).promise}else{const im=await li(URL.createObjectURL(d.file)),ir=d.rotation%180!==0;cv.width=(ir?im.height:im.width)*dpr;cv.height=(ir?im.width:im.height)*dpr;ctx.scale(dpr,dpr);ctx.translate(cv.width/(2*dpr),cv.height/(2*dpr));ctx.rotate(d.rotation*Math.PI/180);ctx.drawImage(im,-im.width/2,-im.height/2)}}
+async function processFiles(o){const sel=Array.from(document.querySelectorAll('.page-card')).filter(c=>c.querySelector('.card-checkbox').checked);if(!sel.length)return alert('เลือกไฟล์ก่อนครับ');sl(!0,!0);const tot=sel.length;try{if(o==='pdf'){const{PDFDocument:PD,degrees:deg}=PDFLib,m=await PD.create();for(let i=0;i<tot;i++){const d=pm.get(sel[i].id);if(d.type==='PDF'){const[p]=await m.copyPages(await PD.load(await d.file.arrayBuffer()),[d.pageIndex]);p.setRotation(deg(p.getRotation().angle+d.rotation));m.addPage(p)}else{const b=await d.file.arrayBuffer(),im=d.file.type==='image/png'?await m.embedPng(b):await m.embedJpg(b),p=m.addPage([im.width,im.height]);p.drawImage(im,{x:0,y:0,width:im.width,height:im.height});p.setRotation(deg(d.rotation))}up(((i+1)/tot)*100)}dl(await m.save(),'export.pdf','application/pdf')}else{if(tot===1){const d=pm.get(sel[0].id),b=await chq(d,o);dl(b,`export.${o}`,`image/${o}`)}else{const z=new JSZip();for(let i=0;i<tot;i++){const d=pm.get(sel[i].id),b=await chq(d,o);z.file(`file_${i+1}.${o}`,b);up(((i+1)/tot)*100)}dl(await z.generateAsync({type:'blob'}),'package.zip','application/zip')}}}catch(e){alert(e.message)}sl(!1,!1)}
+async function chq(d,o){const f=document.createElement('canvas'),ctx=f.getContext('2d');if(d.type==='PDF'){const p=await(await pdfjsLib.getDocument(await d.file.arrayBuffer()).promise).getPage(d.pageIndex+1),v=p.getViewport({scale:3,rotation:d.rotation});f.width=v.width;f.height=v.height;await p.render({canvasContext:ctx,viewport:v}).promise}else{const im=await li(URL.createObjectURL(d.file)),ir=d.rotation%180!==0;f.width=ir?im.height:im.width;f.height=ir?im.width:im.height;ctx.translate(f.width/2,f.height/2);ctx.rotate(d.rotation*Math.PI/180);ctx.drawImage(im,-im.width/2,-im.height/2)}return new Promise(r=>f.toBlob(r,`image/${o}`,.98))}
+function rc(id){const d=pm.get(id);d.rotation=(d.rotation+90)%360;rt(id)}function rmc(id){pm.delete(id);document.getElementById(id).remove();uUI()}function toggleSelectAll(s){document.querySelectorAll('.card-checkbox').forEach(c=>c.checked=s);uUI()}function resetAll(){if(confirm('ล้างทั้งหมด?'))location.reload()}function uUI(){const has=Array.from(document.querySelectorAll('.card-checkbox')).some(c=>c.checked);aa.style.display=has?'flex':'none';document.querySelectorAll('.page-card').forEach(c=>{c.classList.toggle('selected',c.querySelector('.card-checkbox').checked)})}function sl(s,p){document.body.style.cursor=s?'wait':'default';pc.style.display=p?'block':'none';if(!s)up(0)}function up(v){pb.style.width=v+'%'}function dl(b,n,t){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:t}));a.download=n;a.click()}function li(u){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=u})}
+pl.ondragover=e=>{e.preventDefault();const d=document.querySelector('.dragging');if(!d)return;const af=[...pl.querySelectorAll('.page-card:not(.dragging)')].reduce((cl,ch)=>{const b=ch.getBoundingClientRect(),o=e.clientX-b.left-b.width/2;return o<0&&o>cl.offset?{offset:o,element:ch}:cl},{offset:Number.NEGATIVE_INFINITY}).element;af?pl.insertBefore(d,af):pl.appendChild(d)};
+</script>
 </body>
 </html>
